@@ -1,0 +1,61 @@
+.grid-container {
+    display: grid;
+    gap: 1px;
+    background-color: #333;
+    border: 2px solid #333;
+    margin: 20px auto;
+}
+
+.cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 1px solid #555;
+}
+
+/* Cellules communes */
+.cell-empty {
+    background-color: white;
+}
+
+.cell-wall {
+    background-color: #333;
+}
+
+.cell-start {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.cell-end {
+    background-color: #FF5722;
+    color: white;
+}
+
+/* A* - Cellules visitées en JAUNE, chemin en VERT */
+.cell-visited.astar {
+    background-color: rgba(255, 255, 0, 0.6); /* Jaune pour A* */
+}
+
+.cell-path.astar {
+    background-color: rgba(0, 255, 0, 0.8); /* Vert pour A* */
+    animation: pulse 1.5s infinite;
+}
+
+/* Dijkstra - Cellules visitées en BLEU, chemin en ORANGE */
+.cell-visited.dijkstra {
+    background-color: rgba(0, 120, 255, 0.6); /* Bleu pour Dijkstra */
+}
+
+.cell-path.dijkstra {
+    background-color: rgba(255, 165, 0, 0.8); /* Orange pour Dijkstra */
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}

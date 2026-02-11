@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { useWasm } from './hooks/useWasm';
-import { AStar } from './algorithms/AStar';
 import './App.css';
 
 function App() {
@@ -19,6 +18,7 @@ function App() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [dragTarget, setDragTarget] = useState(null);
   const [animationSpeed, setAnimationSpeed] = useState(50);
+  const [selectedAlgo, setSelectedAlgo] = useState('astar');
   
   const [stats, setStats] = useState({
     visited: 0,
@@ -53,81 +53,122 @@ function App() {
     setStats({ visited: 0, pathLength: 0, execTime: 0 });
     setStatusText('Grille effacée');
   };
-  
+
   const runAStar = async () => {
+    if (!wasmModule) {
+      alert(' Module WASM en cours de chargement...');
+      return;
+    }
     if (isAnimating) return;
+
     setIsAnimating(true);
     setVisitedCells(new Set());
     setPathCells([]);
-    setStatusText('Recherche A* en cours...');
-    
-    const startTime = performance.now();
-    const astar = new AStar(grid);
-    
-    const tempVisited = new Set();
-    const callback = async (current) => {
-      tempVisited.add(`${current.x},${current.y}`);
-      setVisitedCells(new Set(tempVisited));
-      setStats(prev => ({ ...prev, visited: tempVisited.size }));
+    setStatusText('🔍 Recherche A* en cours...');
+
+    try {
+      const result = wasmModule.findPathAStar(grid, start.x, start.y, end.x, end.y);
       
-      await new Promise(resolve => setTimeout(resolve, 101 - animationSpeed));
-    };
-    
-    const result = await astar.findPathWithAnimation(start.x, start.y, end.x, end.y, callback);
-    const endTime = performance.now();
-    
-    setPathCells(result.path);
-    setStats({
-      visited: result.exploredCells,
-      pathLength: result.path.length,
-      execTime: Math.round(endTime - startTime)
-    });
-    setStatusText(result.path.length > 0 ? 'Chemin trouvé (A*)!' : 'Aucun chemin');
+      const visitedArray = [];
+      if (result.visited) {
+        for (let i = 0; i < result.visited.length; i++) {
+          visitedArray.push(result.visited[i]);
+        }
+      }
+      
+      const pathArray = [];
+      if (result.path) {
+        for (let i = 0; i < result.path.length; i++) {
+          pathArray.push(result.path[i]);
+        }
+      }
+      
+      const visited = new Set();
+      for (let i = 0; i < visitedArray.length; i++) {
+        const cell = visitedArray[i];
+        visited.add(`${cell.x},${cell.y}`);
+        setVisitedCells(new Set(visited));
+        await new Promise(resolve => setTimeout(resolve, 101 - animationSpeed));
+      }
+      
+      setPathCells(pathArray);
+      setStats({
+        visited: result.exploredCells || 0,
+        pathLength: pathArray.length,
+        execTime: (result.timeMs || 0).toFixed(2)
+      });
+      
+      setStatusText(pathArray.length > 0 ? ' Chemin trouvé (A*)!' : ' Aucun chemin');
+    } catch (err) {
+      console.error(' Erreur A*:', err);
+      alert('Erreur: ' + err.message);
+      setStatusText('Erreur lors de l\'exécution');
+    }
+
     setIsAnimating(false);
   };
-  
+
+  //  NOUVEAU : Dijkstra
   const runDijkstra = async () => {
     if (!wasmModule) {
       alert('⏳ Module WASM en cours de chargement...');
       return;
     }
-    
-    console.log('🔍 Module WASM:', wasmModule);
-    console.log('🔍 Fonctions:', Object.keys(wasmModule));
-    
     if (isAnimating) return;
+
     setIsAnimating(true);
     setVisitedCells(new Set());
     setPathCells([]);
-    setStatusText('Recherche Dijkstra en cours...');
-    
+    setStatusText('🔍 Recherche Dijkstra en cours...');
+
     try {
       const result = wasmModule.findPathDijkstra(grid, start.x, start.y, end.x, end.y);
       
-      console.log('✅ Résultat:', result);
+      const visitedArray = [];
+      if (result.visited) {
+        for (let i = 0; i < result.visited.length; i++) {
+          visitedArray.push(result.visited[i]);
+        }
+      }
       
-      setPathCells(result.path);
+      const pathArray = [];
+      if (result.path) {
+        for (let i = 0; i < result.path.length; i++) {
+          pathArray.push(result.path[i]);
+        }
+      }
+      
+      const visited = new Set();
+      for (let i = 0; i < visitedArray.length; i++) {
+        const cell = visitedArray[i];
+        visited.add(`${cell.x},${cell.y}`);
+        setVisitedCells(new Set(visited));
+        await new Promise(resolve => setTimeout(resolve, 101 - animationSpeed));
+      }
+      
+      setPathCells(pathArray);
       setStats({
-        visited: result.exploredCells,
-        pathLength: result.path.length,
-        execTime: result.timeMs.toFixed(0)
+        visited: result.exploredCells || 0,
+        pathLength: pathArray.length,
+        execTime: (result.timeMs || 0).toFixed(2)
       });
-      setStatusText(result.path.length > 0 ? 'Chemin trouvé (Dijkstra)!' : 'Aucun chemin');
+      
+      setStatusText(pathArray.length > 0 ? ' Chemin trouvé (Dijkstra)!' : 'Aucun chemin');
     } catch (err) {
-      console.error('❌ Erreur Dijkstra:', err);
+      console.error(' Erreur Dijkstra:', err);
       alert('Erreur: ' + err.message);
       setStatusText('Erreur lors de l\'exécution');
     }
-    
+
     setIsAnimating(false);
   };
   
   if (loading) {
-    return <div className="loading">🚀 Chargement du module WASM...</div>;
+    return <div className="loading"> Chargement du module WASM...</div>;
   }
   
   if (error) {
-    return <div className="error">❌ Erreur : {error}</div>;
+    return <div className="error"> Erreur : {error}</div>;
   }
   
   return (
@@ -140,6 +181,8 @@ function App() {
         stats={stats}
         animationSpeed={animationSpeed}
         setAnimationSpeed={setAnimationSpeed}
+        selectedAlgo={selectedAlgo}
+        setSelectedAlgo={setSelectedAlgo}
         isAnimating={isAnimating}
       />
       
@@ -161,30 +204,49 @@ function App() {
   );
 }
 
-function Sidebar({ onRunAStar, onRunDijkstra, onGenerate, onClear, stats, animationSpeed, setAnimationSpeed, isAnimating }) {
+function Sidebar({ onRunAStar, onRunDijkstra, onGenerate, onClear, stats, animationSpeed, setAnimationSpeed, selectedAlgo, setSelectedAlgo, isAnimating }) {
+  const handleSpeedChange = (e) => {
+    const value = parseInt(e.target.value);
+    setAnimationSpeed(value);
+    e.target.style.setProperty('--value', `${value}%`);
+  };
+
+  const handleRun = () => {
+    if (selectedAlgo === 'astar') {
+      onRunAStar();
+    } else {
+      onRunDijkstra();
+    }
+  };
+
   return (
     <div className="sidebar">
+      {/*  NOUVEAU : Sélecteur d'algorithme */}
       <div className="section">
-        <h3>🎯 Algorithme</h3>
-        <select>
+        <h3>⚙️ ALGORITHME</h3>
+        <select 
+          value={selectedAlgo} 
+          onChange={(e) => setSelectedAlgo(e.target.value)}
+        >
           <option value="astar">A* (A-Star)</option>
           <option value="dijkstra">Dijkstra</option>
         </select>
       </div>
 
       <div className="section">
-        <h3>⚙️ Vitesse</h3>
+        <h3> VITESSE</h3>
         <input 
           type="range" 
           min="1" 
           max="100" 
           value={animationSpeed}
-          onChange={(e) => setAnimationSpeed(parseInt(e.target.value))}
+          onChange={handleSpeedChange}
+          style={{'--value': `${animationSpeed}%`}}
         />
       </div>
 
       <div className="section">
-        <h3>🎨 Légende</h3>
+        <h3>LÉGENDE</h3>
         <div className="legend-item">
           <div className="color-box" style={{background: '#4ade80'}}></div>
           <span>Départ</span>
@@ -207,17 +269,14 @@ function Sidebar({ onRunAStar, onRunDijkstra, onGenerate, onClear, stats, animat
         </div>
       </div>
 
-      <button className="btn btn-primary" onClick={onRunAStar} disabled={isAnimating}>
-        ▶ A* (JavaScript)
-      </button>
-      <button className="btn btn-primary" onClick={onRunDijkstra} disabled={isAnimating}>
-        ⚡ Dijkstra (WASM)
+      <button className="btn btn-primary" onClick={handleRun} disabled={isAnimating}>
+        ▶ Lancer
       </button>
       <button className="btn btn-success" onClick={onGenerate} disabled={isAnimating}>
-        🎲 Générer
+        Générer
       </button>
       <button className="btn btn-danger" onClick={onClear} disabled={isAnimating}>
-        🗑️ Effacer
+        Effacer
       </button>
 
       <div className="stats">

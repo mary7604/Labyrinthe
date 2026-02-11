@@ -1,26 +1,22 @@
 #ifndef DIJKSTRA_H
 #define DIJKSTRA_H
 
-#include "Labyrinthe.h"
+#include "Graphe.h"
 #include <vector>
-#include <utility>
 
-struct BenchmarkResult {
-    std::vector<std::pair<int, int>> chemin;
+struct DijkstraResult {
+    std::vector<int> chemin;           // IDs des nœuds
+    std::vector<int> noeudsVisites;    // IDs des nœuds visités
     int casesExplorees;
     double tempsMs;
 };
 
 class Dijkstra {
-private:
-    const Labyrinthe& lab;
-
 public:
-    explicit Dijkstra(const Labyrinthe& l) : lab(l) {}
-    
-    BenchmarkResult trouverCheminAvecStats(
-        int startX, int startY, 
-        int endX, int endY
+    static DijkstraResult trouverCheminAvecStats(
+        const Graphe& graphe,
+        int noeudDepart,
+        int noeudArrivee
     );
 };
 

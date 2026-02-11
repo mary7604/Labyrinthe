@@ -1,81 +1,74 @@
 #include "Dijkstra.h"
 #include <queue>
+#include <map>
 #include <climits>
 #include <algorithm>
 #include <chrono>
 
 using namespace std;
 
-struct Noeud {
-    int x, y, distance;
-    bool operator>(const Noeud& autre) const {
+struct NoeudDijkstra {
+    int id;
+    int distance;
+    
+    bool operator>(const NoeudDijkstra& autre) const {
         return distance > autre.distance;
     }
 };
 
-BenchmarkResult Dijkstra::trouverCheminAvecStats(
-    int startX, int startY, 
-    int endX, int endY
+DijkstraResult Dijkstra::trouverCheminAvecStats(
+    const Graphe& graphe,
+    int noeudDepart,
+    int noeudArrivee
 ) {
     auto debut = chrono::high_resolution_clock::now();
     
-    int largeur = lab.getLargeur();
-    int hauteur = lab.getHauteur();
+    map<int, int> distances;
+    map<int, int> parents;
+    priority_queue<NoeudDijkstra, vector<NoeudDijkstra>, greater<NoeudDijkstra>> pq;
     
-    vector<vector<int>> distances(hauteur, vector<int>(largeur, INT_MAX));
-    vector<vector<pair<int, int>>> parents(hauteur, vector<pair<int, int>>(largeur, {-1, -1}));
+    distances[noeudDepart] = 0;
+    pq.push({noeudDepart, 0});
     
-    priority_queue<Noeud, vector<Noeud>, greater<Noeud>> pq;
-    
-    distances[startY][startX] = 0;
-    pq.push({startX, startY, 0});
-    
-    int casesExplorees = 0;
-    constexpr int dx[] = {0, 0, -1, 1};
-    constexpr int dy[] = {-1, 1, 0, 0};
+    vector<int> noeudsVisites;
     
     while (!pq.empty()) {
-        Noeud courant = pq.top();
+        NoeudDijkstra courant = pq.top();
         pq.pop();
         
-        casesExplorees++;
+        if (distances.count(courant.id) && courant.distance > distances[courant.id]) 
+            continue;
         
-        if (courant.x == endX && courant.y == endY) break;
+        noeudsVisites.push_back(courant.id);
         
-        if (courant.distance > distances[courant.y][courant.x]) continue;
+        if (courant.id == noeudArrivee) break;
         
-        for (int i = 0; i < 4; i++) {
-            int nx = courant.x + dx[i];
-            int ny = courant.y + dy[i];
+        for (const Arete& arete : graphe.getVoisins(courant.id)) {
+            int voisin = arete.destination;
+            int nouvelleDist = distances[courant.id] + arete.poids;
             
-            if (nx >= 0 && nx < largeur && ny >= 0 && ny < hauteur &&
-                lab.getCase(nx, ny) == 0) {
-                
-                int nouvelleDist = distances[courant.y][courant.x] + 1;
-                
-                if (nouvelleDist < distances[ny][nx]) {
-                    distances[ny][nx] = nouvelleDist;
-                    parents[ny][nx] = {courant.x, courant.y};
-                    pq.push({nx, ny, nouvelleDist});
-                }
+            if (!distances.count(voisin) || nouvelleDist < distances[voisin]) {
+                distances[voisin] = nouvelleDist;
+                parents[voisin] = courant.id;
+                pq.push({voisin, nouvelleDist});
             }
         }
     }
     
-    vector<pair<int, int>> chemin;
-    pair<int, int> pos = {endX, endY};
-    
-    if (distances[endY][endX] != INT_MAX) {
-        while (pos.first != -1 && pos.second != -1) {
-            chemin.push_back(pos);
-            if (pos.first == startX && pos.second == startY) break;
-            pos = parents[pos.second][pos.first];
+    vector<int> chemin;
+    if (distances.count(noeudArrivee)) {
+        int noeud = noeudArrivee;
+        while (noeud != noeudDepart) {
+            chemin.push_back(noeud);
+            if (!parents.count(noeud)) break;
+            noeud = parents[noeud];
         }
+        chemin.push_back(noeudDepart);
         reverse(chemin.begin(), chemin.end());
     }
     
     auto fin = chrono::high_resolution_clock::now();
     double tempsMs = chrono::duration<double, milli>(fin - debut).count();
     
-    return {chemin, casesExplorees, tempsMs};
+    return {chemin, noeudsVisites, (int)noeudsVisites.size(), tempsMs};
 }

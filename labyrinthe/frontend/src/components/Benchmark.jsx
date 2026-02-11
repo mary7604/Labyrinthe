@@ -4,7 +4,7 @@ export function Benchmark({ results }) {
   if (!results.dijkstra && !results.astar) {
     return (
       <div style={styles.container}>
-        <h2 style={styles.title}>📊 Résultats Benchmark</h2>
+        <h2 style={styles.title}>Résultats Benchmark</h2>
         <p style={styles.noData}>Aucun résultat pour le moment</p>
       </div>
     );
@@ -16,7 +16,7 @@ export function Benchmark({ results }) {
   
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>📊 Résultats Benchmark</h2>
+      <h2 style={styles.title}> Résultats Benchmark</h2>
       
       <div style={styles.grid}>
         <div style={styles.card}>
@@ -66,7 +66,7 @@ export function Benchmark({ results }) {
       
       {results.dijkstra && results.astar && (
         <div style={styles.winner}>
-          <h3>🏆 Gagnant</h3>
+          <h3> Gagnant</h3>
           <p style={styles.winnerText}>
             {results.dijkstra.timeMs < results.astar.timeMs ? '⚡ Dijkstra (WASM)' : '🧠 A* (JavaScript)'}
           </p>

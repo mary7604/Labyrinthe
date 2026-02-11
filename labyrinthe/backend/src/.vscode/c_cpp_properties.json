@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "name": "Emscripten",
+            "includePath": [
+                "${workspaceFolder}/backend/src",
+                "C:/emsdk/upstream/emscripten/system/include",
+                "C:/emsdk/upstream/emscripten/cache/sysroot/include"
+            ],
+            "compilerPath": "C:/emsdk/upstream/emscripten/em++.bat",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
